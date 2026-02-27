@@ -1,0 +1,36 @@
+name: Update My Custom List
+on:
+  schedule:
+    - cron: '0 0 * * *' # Запуск каждый день в полночь
+  workflow_dispatch:      # Позволяет запустить вручную кнопкой
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download and Combine
+        run: |
+          # Скачиваем файлы (замените ссылки на нужные вам)
+          curl -s https://github.com/itdoginfo/allow-domains/blob/main/Russia/inside-raw.lst > combined.txt
+          echo "" >> combined.txt
+          curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/refs/heads/main/Services/discord.lst >> combined.txt
+          echo "" >> combined.txt
+          curl -s https://github.com/itdoginfo/allow-domains/raw/refs/heads/main/Services/google_ai.lst >> combined.txt
+          echo "" >> combined.txt
+          curl -s https://github.com/itdoginfo/allow-domains/raw/refs/heads/main/Services/telegram.lst >> combined.txt
+          echo "" >> combined.txt
+          curl -s https://github.com/itdoginfo/allow-domains/raw/refs/heads/main/Services/youtube.lst >> combined.txt
+
+          # Удаляем дубликаты и пустые строки
+          sort -u combined.txt -o combined.txt
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add combined.txt
+          git commit -m "Auto-update list" || exit 0
+          git push
