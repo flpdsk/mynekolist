@@ -10,6 +10,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: "Actions bot thingy"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
