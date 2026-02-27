@@ -14,30 +14,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Скачиваем всю историю, чтобы не было конфликтов
+          # Для работы git-auto-commit-action важно иметь актуальную историю
+          fetch-depth: 0 
 
       - name: Download and Combine
         run: |
-          # Скачиваем списки (ваши ссылки)
-          curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/inside-raw.lst > combined.txt
-          echo "" >> combined.txt
-          curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/discord.lst >> combined.txt
-          echo "" >> combined.txt
-          curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/google_ai.lst >> combined.txt
-          echo "" >> combined.txt
-          curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/telegram.lst >> combined.txt
-          echo "" >> combined.txt
-          curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/youtube.lst >> combined.txt
+          # Создаем временный файл, чтобы не повредить основной при ошибке скачивания
+          > combined.tmp
+          
+          # Список URL (удобнее поддерживать списком)
+          URLS=(
+            "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/inside-raw.lst"
+            "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/discord.lst"
+            "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/google_ai.lst"
+            "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/telegram.lst"
+            "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/youtube.lst"
+          )
 
-          # Чистим и сортируем
-          sed -i '/^$/d' combined.txt
-          sort -u combined.txt -o combined.txt
-          git pull --rebase
+          for url in "${URLS[@]}"; do
+            curl -s "$url" >> combined.tmp
+            echo "" >> combined.tmp
+          done
+
+          # Чистка: удаляем пустые строки, пробелы в начале/конце и сортируем уникально
+          sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' combined.tmp
+          sed -i '/^$/d' combined.tmp
+          sort -u combined.tmp -o combined.txt
+          rm combined.tmp
 
       - name: Commit and Push
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: Auto-update list
+          commit_message: "chore: auto-update list [skip ci]"
           file_pattern: 'combined.txt'
-          push_options: '--force' # Если и это не поможет, значит дело в защите ветки
-          skip_fetch: false
+          # Опция skip_dirty_check: false заставит экшен пушить только если файл реально изменился
+          skip_dirty_check: false    
+          # Указываем автора, чтобы коммит выглядел корректно
+          commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
