@@ -14,11 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Скачиваем всю историю, чтобы не было конфликтов
 
       - name: Download and Combine
         run: |
-          # Скачиваем списки
+          # Скачиваем списки (ваши ссылки)
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/inside-raw.lst > combined.txt
           echo "" >> combined.txt
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/discord.lst >> combined.txt
@@ -34,18 +34,9 @@ jobs:
           sort -u combined.txt -o combined.txt
 
       - name: Commit and Push
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git add combined.txt
-          
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M')"
-          
-          # Мы используем --force, чтобы просто затолкнуть изменения поверх любых конфликтов
-          git push origin main --force
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Auto-update list
+          file_pattern: 'combined.txt'
+          push_options: '--force' # Если и это не поможет, значит дело в защите ветки
+          skip_fetch: false
