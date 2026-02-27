@@ -1,3 +1,12 @@
+name: Update My Custom List
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,10 +18,7 @@ jobs:
 
       - name: Download and Combine
         run: |
-          # 1. Сначала подтягиваем все изменения из репозитория
-          git pull origin main
-
-          # 2. Скачиваем свежие списки
+          # Скачиваем списки
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/inside-raw.lst > combined.txt
           echo "" >> combined.txt
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/discord.lst >> combined.txt
@@ -23,7 +29,7 @@ jobs:
           echo "" >> combined.txt
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/youtube.lst >> combined.txt
 
-          # 3. Чистим и сортируем
+          # Чистим и сортируем
           sed -i '/^$/d' combined.txt
           sort -u combined.txt -o combined.txt
 
@@ -34,7 +40,6 @@ jobs:
           
           git add combined.txt
           
-          # Проверка на наличие изменений
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
@@ -42,5 +47,5 @@ jobs:
 
           git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M')"
           
-          # Пытаемся отправить. Если опять будет конфликт — принудительно обновляем историю
-          git push origin main || (git pull --rebase origin main && git push origin main)
+          # Мы используем --force, чтобы просто затолкнуть изменения поверх любых конфликтов
+          git push origin main --force
