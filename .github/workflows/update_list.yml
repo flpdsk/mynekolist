@@ -14,15 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Для работы git-auto-commit-action важно иметь актуальную историю
           fetch-depth: 0 
 
       - name: Download and Combine
+        id: download_step
         run: |
-          # Создаем временный файл, чтобы не повредить основной при ошибке скачивания
-          > combined.tmp
-          
-          # Список URL (удобнее поддерживать списком)
           URLS=(
             "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/inside-raw.lst"
             "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/discord.lst"
@@ -31,23 +27,39 @@ jobs:
             "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/youtube.lst"
           )
 
+          raw_data=""
+          errors=""
+
           for url in "${URLS[@]}"; do
-            curl -s "$url" >> combined.tmp
-            echo "" >> combined.tmp
+            # Попытка скачать файл (до 3 раз при сетевых сбоях)
+            if content=$(curl -fsL --retry 3 "$url"); then
+              raw_data+=$'\n'"$content"
+            else
+              echo "Error: Failed to download $url"
+              errors+="❌ Ошибка загрузки: $url%0A"
+            fi
           done
 
-          # Чистка: удаляем пустые строки, пробелы в начале/конце и сортируем уникально
-          sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' combined.tmp
-          sed -i '/^$/d' combined.tmp
-          sort -u combined.tmp -o combined.txt
-          rm combined.tmp
+          # Обработка списка
+          echo "$raw_data" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' | sort -u > combined.txt
+          
+          # Передаем ошибки в следующие шаги, если они есть
+          if [ ! -z "$errors" ]; then
+            echo "download_errors=$errors" >> $GITHUB_OUTPUT
+            echo "has_errors=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Telegram Notification on Error
+        if: steps.download_step.outputs.has_errors == 'true'
+        run: |
+          MESSAGE="⚠️ *Внимание! Проблемы при обновлении списка* %0A%0A${{ steps.download_step.outputs.download_errors }}"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=$MESSAGE&parse_mode=Markdown"
 
       - name: Commit and Push
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: auto-update list [skip ci]"
           file_pattern: 'combined.txt'
-          # Опция skip_dirty_check: false заставит экшен пушить только если файл реально изменился
           skip_dirty_check: false    
-          # Указываем автора, чтобы коммит выглядел корректно
           commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
