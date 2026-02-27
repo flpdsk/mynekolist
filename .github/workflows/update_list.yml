@@ -32,6 +32,7 @@ jobs:
           # Чистим и сортируем
           sed -i '/^$/d' combined.txt
           sort -u combined.txt -o combined.txt
+          git pull --rebase
 
       - name: Commit and Push
         uses: stefanzweifel/git-auto-commit-action@v5
