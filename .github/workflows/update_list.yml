@@ -1,24 +1,18 @@
-name: Update My Custom List
-on:
-  schedule:
-    - cron: '0 */3 * * *'
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Обновил до v4, она стабильнее
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Важно для корректного pull/rebase
+          fetch-depth: 0
 
       - name: Download and Combine
         run: |
-          # Скачиваем файлы
+          # 1. Сначала подтягиваем все изменения из репозитория
+          git pull origin main
+
+          # 2. Скачиваем свежие списки
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/inside-raw.lst > combined.txt
           echo "" >> combined.txt
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/discord.lst >> combined.txt
@@ -29,7 +23,7 @@ jobs:
           echo "" >> combined.txt
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/youtube.lst >> combined.txt
 
-          # Удаляем дубликаты, пустые строки и лишние пробелы
+          # 3. Чистим и сортируем
           sed -i '/^$/d' combined.txt
           sort -u combined.txt -o combined.txt
 
@@ -40,14 +34,13 @@ jobs:
           
           git add combined.txt
           
-          # Проверка: есть ли изменения? Если нет — выходим без ошибки
+          # Проверка на наличие изменений
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
-          git commit -m "Auto-update list: $(date +'%Y-%m-%d %H:%M')"
+          git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M')"
           
-          # Ключевой момент: подтягиваем изменения прямо перед отправкой
-          git pull --rebase origin main
-          git push
+          # Пытаемся отправить. Если опять будет конфликт — принудительно обновляем историю
+          git push origin main || (git pull --rebase origin main && git push origin main)
