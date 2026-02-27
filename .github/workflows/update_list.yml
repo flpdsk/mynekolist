@@ -13,6 +13,7 @@ jobs:
 
       - name: Download and Combine
         run: |
+          git pull --rebase
           # Скачиваем файлы (замените ссылки на нужные вам)
           curl -s https://raw.githubusercontent.com/itdoginfo/allow-domains/refs/heads/main/Russia/inside-raw.lst > combined.txt
           echo "" >> combined.txt
