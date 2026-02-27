@@ -26,7 +26,6 @@ jobs:
             "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/google_ai.lst"
             "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/telegram.lst"
             "https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Services/youtube.lst"
-            "https://google.com/404-error-page-test"
             ) 
 
           raw_data=""
