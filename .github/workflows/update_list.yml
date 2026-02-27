@@ -1,8 +1,8 @@
 name: Update My Custom List
 on:
   schedule:
-    - cron: '0 0 * * *' # Запуск каждый день в полночь
-  workflow_dispatch:      # Позволяет запустить вручную кнопкой
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
